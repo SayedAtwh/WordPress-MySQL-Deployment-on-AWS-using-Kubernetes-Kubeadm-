@@ -1,103 +1,85 @@
-# 🚀 WordPress & MySQL High-Availability Deployment on AWS
+# 🚀 Comprehensive WordPress on AWS: Technical Showcase
 
-A production-grade Kubernetes deployment featuring shared persistent storage via Amazon EFS, high-performance database blocks with Amazon EBS, and robust traffic management.
+This project demonstrates a production-grade, highly available WordPress deployment on AWS using Kubernetes. Below is a detailed visual guide through the infrastructure, storage, and networking layers.
 
 ---
 
-## 🏗️ Architecture Visualization
-Understanding the flow between components is crucial for a stable deployment.
+## 🏗️ Project Architecture Overview
+Visualizing the entire stack from the user request down to the persistent storage.
 
 ```mermaid
 graph TD
-    Client[🌐 Internet] --> LB[⚖️ AWS Load Balancer]
-    subgraph "Kubernetes Cluster"
-        LB --> Service[🔌 WordPress Service]
-        Service --> Pod1[📦 wordpress-pod-1]
-        Service --> Pod2[📦 wordpress-pod-2]
-        
-        subgraph "Storage Layer"
-            Pod1 --- EFS[(📂 EFS: WP Content)]
-            Pod2 --- EFS[(📂 EFS: WP Content)]
-            Pod1 --- DB_SVC[🔌 MySQL Service]
-            Pod2 --- DB_SVC[🔌 MySQL Service]
-            DB_SVC --- MySQL[🗄️ MySQL Pod]
-            MySQL --- EBS[(💾 EBS: Database)]
-        end
+    User[👤 User] --> ALP[⚖️ project-ALP]
+    ALP --> TG[📂 project-Target-Group]
+    subgraph "Kubernetes Ecosystem"
+        TG --> WP_SVC[🔌 WordPress Service]
+        WP_SVC --> WP_Pods[📦 WordPress Pods]
+        WP_Pods --- EFS[(📂 create-awsEFS)]
+        WP_Pods --- DB_SVC[🔌 MySQL Service]
+        DB_SVC --- MySQL_Pod[🗄️ MySQL Pod]
+        MySQL_Pod --- EBS[(💾 aws-EBS)]
     end
 ```
 
 ---
 
-## 📸 Component deep dive
+## 📸 Technical Documentation & Visuals
 
-### 1. Storage Hybrid Strategy
-We separate static content from database data to maximize throughput and reliability.
+### 1. project-architecture
+![System Architecture](./Screenshot-project/project-architecture.png)
+The master blueprint. It illustrates the hybrid storage model (EFS + EBS) and how Kubernetes orchestrates the frontend/backend communication within the AWS cloud perimeter.
 
-| Component | Storage Type | Purpose |
-| :--- | :--- | :--- |
-| **WordPress Files** | **Amazon EFS** | Allows multiple pods to read/write the same media & plugins simultaneously. |
-| **MySQL Data** | **Amazon EBS** | Guaranteed low-latency block storage for lightning-fast database queries. |
+### 2. project-ALP (Application Load Balancer)
+![AWS ALB](./Screenshot-project/project-ALP.png)
+The entry point for all traffic. The Application Load Balancer (ALB) provides a single DNS entry and handles SSL termination, ensuring secure and efficient traffic distribution.
 
-![EFS Creation](./Screenshot-project/create-awsEFS.png)
-> [!NOTE]
-> **EFS Setup**: We use EFS for `/var/www/html` to ensure that when you upload an image to one WordPress pod, it is instantly available to all other pods.
+### 3. project-Target-Group
+![Target Group](./Screenshot-project/project-Target-Group.png)
+The Target Group acts as the bridge between the ALB and the Kubernetes nodes. It performs health checks to ensure traffic is only routed to healthy ec2 instances.
 
-### 2. Traffic Management
-![Kubeview](./Screenshot-project/kubeview.png)
+### 4. clusterNode-node-ec2
+![EC2 Nodes](./Screenshot-project/clusterNode-node-ec2.png)
+The "muscle" of the project. These Amazon EC2 instances form the Kubernetes cluster nodes where our WordPress and MySQL pods reside.
+
+### 5. create-awsEFS
+![EFS Provisioning](./Screenshot-project/create-awsEFS.png)
+Creating the Amazon EFS filesystem. EFS provides the shared network storage required for WordPress to scale horizontally, allowing all pods to access the same `wp-content`.
+
+### 6. create-accessPoint-EFS
+![EFS Access Point](./Screenshot-project/create-accessPoint-EFS.png)
+EFS Access Points are application-specific entry points into an EFS file system. They simplify managing application access by enforcing a user identity and root directory.
+
+### 7. aws-EBS
+![EBS Volume](./Screenshot-project/aws-EBS.png)
+The high-performance block storage for our database. Amazon EBS ensures that the MySQL data is persistent and has the high IOPS required for database operations.
+
+### 8. kubeview
+![Cluster Visualization](./Screenshot-project/kubeview.png)
+A real-time visual representation of the Kubernetes cluster. It shows the logical relationship between services, deployments, and pods across the physical nodes.
+
+### 9. resources-all
+![Resource Management](./Screenshot-project/resources-all.png)
+Zero "Noisy Neighbor" policy. By defining CPU and Memory `requests` and `limits`, we ensure every container has the resources it needs without crashing others.
+
+### 10. yaml-file-from-project
+![Manifest Example](./Screenshot-project/yaml-file-from-project.png)
+Infrastructure as Code (IaC). Every component in this project is defined via declarative YAML manifests, ensuring the entire setup is reproducible and version-controlled.
+
+### 11. wordPress-website
+![Live Site](./Screenshot-project/wordPress-website.png)
+The final result: A fully operational, responsive, and high-performance WordPress site running on a robust, enterprise-grade cloud architecture.
+
+---
+
+## ☸️ Step-by-Step Deployment
+
 > [!TIP]
-> **Kubeview Visualization**: This view shows how Kubernetes balances our frontend pods across different nodes, ensuring that if one node fails, the site stays online.
+> Always deploy the **Namespace** and **Secrets** first to provide the foundation for the rest of the stack.
+
+1. **Foundations**: `kubectl apply -f project-namespace.yaml` & `mysql-secret-password.yaml`
+2. **Storage**: `kubectl apply -f mysql-sc.yaml`, `wordpress-pv.yaml`, & `wordpress-pvc.yaml`
+3. **Database**: `kubectl apply -f mysql-deployment.yaml`
+4. **App**: `kubectl apply -f wordpress-deployment.yaml` & `wordpress-service.yaml`
 
 ---
-
-## 🚨 Stability: Resolving "Noisy Neighbor" Issues
-A common issue in Kubernetes is when one container steals all the CPU/RAM, crashing others. We solve this using **Resources**.
-
-![Resources Overview](./Screenshot-project/resources-all.png)
-
-> [!IMPORTANT]
-> **Crucial Best Practice**: Every container should have `requests` and `limits`. 
-> - **Requests**: Guaranteed minimum resources.
-> - **Limits**: The hard ceiling to prevent a container from impacting "neighbors".
-
----
-
-## ☸️ Quick Start Guide
-
-### 1️⃣ Initial Infrastructure
-```bash
-# Create the project workspace
-kubectl apply -f project-namespace.yaml
-
-# Secure your database credentials
-kubectl apply -f mysql-secret-password.yaml
-```
-
-### 2️⃣ Provision Storage
-```bash
-# Set up StorageClasses and Volumes
-kubectl apply -f mysql-sc.yaml
-kubectl apply -f wordpress-pv.yaml
-kubectl apply -f wordpress-pvc.yaml
-```
-
-### 3️⃣ Launch Core Services
-```bash
-# Deploy Database first
-kubectl apply -f mysql-deployment.yaml
-
-# Deploy WordPress Frontend
-kubectl apply -f wordpress-deployment.yaml
-
-# Expose to the internet
-kubectl apply -f wordpress-service.yaml
-```
-
----
-
-## 🌟 The Final Result
-Once deployed, your high-availability WordPress site is fully operational on AWS.
-
-![Final Website](./Screenshot-project/wordPress-website.png)
-
----
-*Developed with a focus on Cloud-Native Reliability & DevOps Excellence.*
+*Created with ❤️ for the DevOps Community.*
