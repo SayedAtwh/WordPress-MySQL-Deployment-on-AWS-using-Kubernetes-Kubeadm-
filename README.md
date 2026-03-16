@@ -5,21 +5,8 @@ This project demonstrates a production-grade, highly available WordPress deploym
 ---
 
 ## 🏗️ Project Architecture Overview
-Visualizing the entire stack from the user request down to the persistent storage.
-
-```mermaid
-graph TD
-    User[👤 User] --> ALP[⚖️ project-ALP]
-    ALP --> TG[📂 project-Target-Group]
-    subgraph "Kubernetes Ecosystem"
-        TG --> WP_SVC[🔌 WordPress Service]
-        WP_SVC --> WP_Pods[📦 WordPress Pods]
-        WP_Pods --- EFS[(📂 create-awsEFS)]
-        WP_Pods --- DB_SVC[🔌 MySQL Service]
-        DB_SVC --- MySQL_Pod[🗄️ MySQL Pod]
-        MySQL_Pod --- EBS[(💾 aws-EBS)]
-    end
-```
+![Full System Architecture](./Screenshot-project/project-architecture.png)
+The master blueprint illustrating the high-availability flow between the AWS Load Balancer, Kubernetes ecosystem, and the hybrid storage layer (EFS & EBS).
 
 ---
 
@@ -81,5 +68,15 @@ The final result: A fully operational, responsive, and high-performance WordPres
 3. **Database**: `kubectl apply -f mysql-deployment.yaml`
 4. **App**: `kubectl apply -f wordpress-deployment.yaml` & `wordpress-service.yaml`
 
+
+
+👤 Author
+
+Name : Sayed Atwh Sayed
+
+GitHub : https://github.com/SayedAtwh/
+
+LinkedIn : https://www.linkedin.com/in/sayed-atwh-sayed
+
+Email : sayed.atwh.sayed@gmail.com
 ---
-*Created with ❤️ for the DevOps Community.*
